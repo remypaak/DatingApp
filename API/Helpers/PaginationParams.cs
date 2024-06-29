@@ -1,4 +1,4 @@
-﻿namespace API.Helpers;
+namespace API.Helpers;
 
 public class PaginationParams
 {
@@ -7,7 +7,7 @@ public class PaginationParams
     private int _pageSize = 10;
     public int PageSize
     {
-        get => _pageSize;
-        set => _pageSize = (value > MaxPageSize) ? MaxPageSize : value;
+        get => this._pageSize;
+        set => this._pageSize = (value > MaxPageSize) ? MaxPageSize : value;
     }
 }

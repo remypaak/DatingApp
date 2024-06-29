@@ -1,25 +1,26 @@
-﻿using API.Helpers;
+namespace API.Services;
+using API.Helpers;
 using API.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.Extensions.Options;
 
-namespace API.Services;
-
 public class PhotoService : IPhotoService
 {
     private readonly Cloudinary _cloudinary;
-    public PhotoService(IOptions<CloudinarySettings> config){
+    public PhotoService(IOptions<CloudinarySettings> config)
+    {
         var acc = new Account(config.Value.CloudName, config.Value.ApiKey, config.Value.ApiSecret);
 
-        _cloudinary = new Cloudinary(acc);
+        this._cloudinary = new Cloudinary(acc);
     }
 
     public async Task<ImageUploadResult> AddPhotoAsync(IFormFile file)
     {
         var uploadResult = new ImageUploadResult();
 
-        if (file.Length > 0) {
+        if (file.Length > 0)
+        {
             using var stream = file.OpenReadStream();
             var uploadParams = new ImageUploadParams
             {
@@ -28,7 +29,7 @@ public class PhotoService : IPhotoService
                 Folder = "da-net8"
             };
 
-            uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            uploadResult = await this._cloudinary.UploadAsync(uploadParams);
         }
         return uploadResult;
     }
@@ -37,6 +38,6 @@ public class PhotoService : IPhotoService
     {
         var deleteParams = new DeletionParams(publicId);
 
-        return await _cloudinary.DestroyAsync(deleteParams);
+        return await this._cloudinary.DestroyAsync(deleteParams);
     }
 }

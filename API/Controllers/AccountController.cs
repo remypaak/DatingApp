@@ -1,14 +1,13 @@
-﻿using System.Security.Cryptography;
+namespace API.Controllers;
+using System.Security.Cryptography;
 using System.Text;
 using API.Data;
-using API.Entities;
 using API.DTOs;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using API.Entities;
 using API.Interfaces;
 using AutoMapper;
-
-namespace API.Controllers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 public class AccountController(DataContext context, ITokenService tokenService, IMapper mapper) : BaseApiController
 {
@@ -16,7 +15,12 @@ public class AccountController(DataContext context, ITokenService tokenService, 
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
 
-        if (await UserExists(registerDto.Username)) return BadRequest("Username is taken");
+        if (await this.UserExists(registerDto.Username))
+        {
+
+            return this.BadRequest("Username is taken");
+        }
+
         using var hmac = new HMACSHA512();
 
         var user = mapper.Map<AppUser>(registerDto);
@@ -40,14 +44,21 @@ public class AccountController(DataContext context, ITokenService tokenService, 
     public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
     {
         var user = await context.Users.Include(p => p.Photos).FirstOrDefaultAsync(x => x.UserName == loginDto.Username.ToLower());
-        if (user == null) return Unauthorized("Invalid username");
+        if (user == null)
+        {
+            return this.Unauthorized("Invalid username");
+        }
 
         using var hmac = new HMACSHA512(user.PasswordSalt);
 
         var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
 
-        for (int i = 0; i < computedHash.Length; i++){
-            if (computedHash[i] != user.PasswordHash[i]) return Unauthorized("Invalid password");
+        for (var i = 0; i < computedHash.Length; i++)
+        {
+            if (computedHash[i] != user.PasswordHash[i])
+            {
+                return this.Unauthorized("Invalid password");
+            }
         }
 
         return new UserDto
@@ -60,9 +71,5 @@ public class AccountController(DataContext context, ITokenService tokenService, 
         };
     }
 
-    private async Task<bool> UserExists(string username)
-    {
-        return await context.Users.AnyAsync(x => x.UserName.ToLower() == username.ToLower());
-
-    }
+    private async Task<bool> UserExists(string username) => await context.Users.AnyAsync(x => x.UserName == username.ToLower());
 }

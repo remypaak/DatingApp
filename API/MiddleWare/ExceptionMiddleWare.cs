@@ -1,8 +1,7 @@
-﻿using System.Net;
+namespace API.MiddleWare;
+using System.Net;
 using System.Text.Json;
 using API.Errors;
-
-namespace API.MiddleWare;
 
 public class ExceptionMiddleWare(RequestDelegate next, ILogger<ExceptionMiddleWare> logger, IHostEnvironment env)
 {
@@ -12,13 +11,13 @@ public class ExceptionMiddleWare(RequestDelegate next, ILogger<ExceptionMiddleWa
         {
             await next(context);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             logger.LogError(ex, ex.Message);
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            var response = env.IsDevelopment() 
+            var response = env.IsDevelopment()
             ? new ApiException(context.Response.StatusCode, ex.Message, ex.StackTrace)
             : new ApiException(context.Response.StatusCode, ex.Message, "Internal server error");
 

@@ -1,6 +1,5 @@
-﻿using CloudinaryDotNet.Actions;
-
 namespace API.Interfaces;
+using CloudinaryDotNet.Actions;
 
 public interface IPhotoService
 {
