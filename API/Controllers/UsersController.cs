@@ -18,9 +18,9 @@ public class UsersController(IUserRepository userRepository, IMapper mapper, IPh
         userParams.CurrentUsername = this.User.GetUserName();
         var users = await userRepository.GetMembersAsync(userParams);
 
-        this.Response.AddPaginationHeader(users);
+        Response.AddPaginationHeader(users);
 
-        return this.Ok(users);
+        return Ok(users);
     }
 
     [HttpGet("{username}")]
