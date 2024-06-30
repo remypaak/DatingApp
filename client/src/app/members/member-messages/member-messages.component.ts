@@ -22,17 +22,17 @@ export class MemberMessagesComponent implements AfterViewChecked {
 	messageService = inject(MessageService);
 	username = input.required<string>();
 	messageContent = "";
-	loading = false;
+	loading1 = false;
 
 	sendMessage() {
-		this.loading = true;
+		this.loading1 = true;
 		this.messageService
 			.sendMessage(this.username(), this.messageContent)
 			.then(() => {
 				this.messageForm?.reset();
 				this.scrollToBottom();
-			})
-			.finally(() => (this.loading = false));
+			}) 
+			.finally(() => (this.loading1 = false));
 	}
 
 	ngAfterViewChecked(): void {
