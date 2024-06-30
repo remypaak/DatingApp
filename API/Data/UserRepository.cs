@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 public class UserRepository(DataContext context, IMapper mapper) : IUserRepository
 {
     public async Task<MemberDto?> GetMemberAsync(string username) => await context.Users
-        .Where(x => x.UserName == username)
+        .Where(x => x.UserName == username).IgnoreQueryFilters()
         .ProjectTo<MemberDto>(mapper.ConfigurationProvider)
         .SingleOrDefaultAsync();
 

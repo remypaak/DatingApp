@@ -9,11 +9,14 @@ public class DataContext(DbContextOptions options) : IdentityDbContext<AppUser, 
     public DbSet<UserLike> Likes { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Group> Groups { get; set; }
+    public DbSet<Photo> Photos { get; set; }
     public DbSet<Connection> Connections { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Photo>().HasQueryFilter(photo => photo.IsApproved);
 
         modelBuilder.Entity<AppUser>()
             .HasMany(ur => ur.UserRoles)
@@ -40,7 +43,7 @@ public class DataContext(DbContextOptions options) : IdentityDbContext<AppUser, 
             .HasOne(s => s.TargetUser)
             .WithMany(l => l.LikedByUsers)
             .HasForeignKey(s => s.TargetUserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<Message>()
             .HasOne(x => x.Recipient)
