@@ -1,37 +1,98 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { environment } from '../../environments/environment';
-import { HttpClient } from '@angular/common/http';
-import { PaginationResult } from '../_models/pagination';
-import { Message } from '../_models/message';
-import { setPaginatedResponse, setPaginationHeaders } from './helpers/paginationHelper';
+import { Injectable, inject, signal } from "@angular/core";
+import { environment } from "../../environments/environment";
+import { HttpClient } from "@angular/common/http";
+import { PaginationResult } from "../_models/pagination";
+import { Message } from "../_models/message";
+import {
+	setPaginatedResponse,
+	setPaginationHeaders,
+} from "./helpers/paginationHelper";
+import {
+	HubConnection,
+	HubConnectionBuilder,
+	HubConnectionState,
+} from "@microsoft/signalr";
+import { User } from "../_models/user";
+import { Group } from "../_models/group";
 
 @Injectable({
-  providedIn: 'root'
+	providedIn: "root",
 })
 export class MessageService {
-  baseUrl = environment.apiUrl;
-  private http = inject(HttpClient);
-  paginatedResult = signal<PaginationResult<Message[]> | null>(null);
+	baseUrl = environment.apiUrl;
+	hubUrl = environment.hubsUrl;
+	private http = inject(HttpClient);
+	hubConnection?: HubConnection;
+	paginatedResult = signal<PaginationResult<Message[]> | null>(null);
+	messageThread = signal<Message[]>([]);
 
-  getMessages(pageNumber: number, pageSize: number, container: string){
-    let params = setPaginationHeaders(pageNumber, pageSize);
+	createHubConnection(user: User, otherUsername: string) {
+		this.hubConnection = new HubConnectionBuilder()
+			.withUrl(this.hubUrl + "message?user=" + otherUsername, {
+				accessTokenFactory: () => user.token,
+			})
+			.withAutomaticReconnect()
+			.build();
 
-    params = params.append('Container', container);
+		this.hubConnection.start().catch((error) => console.log(error));
 
-    return this.http.get<Message[]>(this.baseUrl + 'message', {observe: 'response', params}).subscribe({
-      next: response => setPaginatedResponse(response, this.paginatedResult)
-    })
-  }
+		this.hubConnection.on("ReceiveMessageThread", (messages) => {
+			this.messageThread.set(messages);
+		});
 
-  getMessageThread(username: string){
-    return this.http.get<Message[]>(this.baseUrl + 'message/thread/' + username);
-  }
+		this.hubConnection.on("NewMessage", (message) => {
+			this.messageThread.update((messages) => [...messages, message]);
+		});
 
-  sendMessage(username: string, content: string){
-    return this.http.post<Message>(this.baseUrl + 'message', {recipientUsername: username, content: content})
-  }
+		this.hubConnection.on("UpdatedGroup", (group: Group) => {
+			if (group.connections.some((x) => x.username === otherUsername)) {
+				this.messageThread.update((messages) => {
+					messages.forEach((message) => {
+						if (!message.dateRead) {
+							message.dateRead = new Date(Date.now());
+						}
+					});
+					return messages;
+				});
+			}
+		});
+	}
 
-  deleteMessage(id: number){
-    return this.http.delete(this.baseUrl + 'message/' + id);
-  }
+	stopHubConnection() {
+		if (this.hubConnection?.state === HubConnectionState.Connected) {
+			this.hubConnection.stop().catch((error) => console.log(error));
+		}
+	}
+	getMessages(pageNumber: number, pageSize: number, container: string) {
+		let params = setPaginationHeaders(pageNumber, pageSize);
+
+		params = params.append("Container", container);
+
+		return this.http
+			.get<Message[]>(this.baseUrl + "message", {
+				observe: "response",
+				params,
+			})
+			.subscribe({
+				next: (response) =>
+					setPaginatedResponse(response, this.paginatedResult),
+			});
+	}
+
+	getMessageThread(username: string) {
+		return this.http.get<Message[]>(
+			this.baseUrl + "message/thread/" + username
+		);
+	}
+
+	async sendMessage(username: string, content: string) {
+		return this.hubConnection?.invoke("SendMessage", {
+			recipientUsername: username,
+			content,
+		});
+	}
+
+	deleteMessage(id: number) {
+		return this.http.delete(this.baseUrl + "message/" + id);
+	}
 }
