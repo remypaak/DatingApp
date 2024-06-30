@@ -16,10 +16,10 @@ public class AccountController(UserManager<AppUser> userManager, ITokenService t
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
 
-        if (await this.UserExists(registerDto.Username))
+        if (await UserExists(registerDto.Username))
         {
 
-            return this.BadRequest("Username is taken");
+            return BadRequest("Username is taken");
         }
 
         var user = mapper.Map<AppUser>(registerDto);
@@ -44,7 +44,7 @@ public class AccountController(UserManager<AppUser> userManager, ITokenService t
         var user = await userManager.Users.Include(p => p.Photos).FirstOrDefaultAsync(x => x.NormalizedUserName == loginDto.Username.ToUpper());
         if (user == null || user.UserName == null)
         {
-            return this.Unauthorized("Invalid username");
+            return Unauthorized("Invalid username");
         }
 
         return new UserDto

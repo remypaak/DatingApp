@@ -16,7 +16,7 @@ public class BuggyController(DataContext context) : BaseApiController
         var thing = context.Users.Find(-1);
         if (thing == null)
         {
-            return this.NotFound();
+            return NotFound();
         }
 
         return thing;
@@ -31,7 +31,7 @@ public class BuggyController(DataContext context) : BaseApiController
     }
 
     [HttpGet("bad-request")]
-    public ActionResult<string> GetBadRequest() => this.BadRequest("This was not a good request");
+    public ActionResult<string> GetBadRequest() => BadRequest("This was not a good request");
 }
 
 

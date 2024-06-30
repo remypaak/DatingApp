@@ -9,23 +9,23 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [Authorize]
-public class MessageController(IMessageRepository messageRepository, IUserRepository userRepository, IMapper mapper) : BaseApiController
+public class MessageController(IUnitOfWork unitOfWork, IMapper mapper) : BaseApiController
 {
     [HttpPost]
     public async Task<ActionResult<MessageDto>> CreateMessage(CreateMessageDto createMessageDto)
     {
-        var username = this.User.GetUserName();
+        var username = User.GetUserName();
 
         if (username.Equals(createMessageDto.RecipientUsername, StringComparison.CurrentCultureIgnoreCase))
         {
-            return this.BadRequest("You cannot message yourself");
+            return BadRequest("You cannot message yourself");
         }
-        var sender = await userRepository.GetUserByUsernameAsync(username);
-        var recipient = await userRepository.GetUserByUsernameAsync(createMessageDto.RecipientUsername);
+        var sender = await unitOfWork.UserRepository.GetUserByUsernameAsync(username);
+        var recipient = await unitOfWork.UserRepository.GetUserByUsernameAsync(createMessageDto.RecipientUsername);
 
         if (recipient == null || sender == null || sender.UserName == null || recipient.UserName == null)
         {
-            return this.BadRequest("Cannot send message at this time");
+            return BadRequest("Cannot send message at this time");
         }
 
         var message = new Message
@@ -39,23 +39,23 @@ public class MessageController(IMessageRepository messageRepository, IUserReposi
 
         };
 
-        messageRepository.AddMessage(message);
+        unitOfWork.MessageRepository.AddMessage(message);
 
-        if (await messageRepository.SaveAllAsync())
+        if (await unitOfWork.Complete())
         {
-            return this.Ok(mapper.Map<MessageDto>(message));
+            return Ok(mapper.Map<MessageDto>(message));
         }
 
-        return this.BadRequest("Failed to save message");
+        return BadRequest("Failed to save message");
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MessageDto>>> GetMessagesForUser([FromQuery] MessageParams messageParams)
     {
-        messageParams.Username = this.User.GetUserName();
+        messageParams.Username = User.GetUserName();
 
-        var messages = await messageRepository.GetMessagesForUser(messageParams);
-        this.Response.AddPaginationHeader(messages);
+        var messages = await unitOfWork.MessageRepository.GetMessagesForUser(messageParams);
+        Response.AddPaginationHeader(messages);
 
         return messages;
     }
@@ -63,9 +63,9 @@ public class MessageController(IMessageRepository messageRepository, IUserReposi
     [HttpGet("thread/{username}")]
     public async Task<ActionResult<IEnumerable<MessageDto>>> GetMessageThread(string username)
     {
-        var currentUsername = this.User.GetUserName();
+        var currentUsername = User.GetUserName();
 
-        return this.Ok(await messageRepository.GetMessageThread(currentUsername, username));
+        return Ok(await unitOfWork.MessageRepository.GetMessageThread(currentUsername, username));
     }
 
     [HttpDelete("{id}")]
@@ -73,7 +73,7 @@ public class MessageController(IMessageRepository messageRepository, IUserReposi
     {
         var username = User.GetUserName();
 
-        var message = await messageRepository.GetMessage(id);
+        var message = await unitOfWork.MessageRepository.GetMessage(id);
 
         if (message == null)
             return BadRequest("Cannot delete this message");
@@ -88,10 +88,10 @@ public class MessageController(IMessageRepository messageRepository, IUserReposi
 
         if (message is { SenderDeleted: true, RecipientDeleted: true })
         {
-            messageRepository.DeleteMessage(message);
+            unitOfWork.MessageRepository.DeleteMessage(message);
         }
 
-        if (await messageRepository.SaveAllAsync())
+        if (await unitOfWork.Complete())
             return Ok();
 
         return BadRequest("Problem deleting the message");
